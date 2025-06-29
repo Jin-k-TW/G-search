@@ -1,8 +1,8 @@
-# streamlit_app.py（ステップ1：入力・実行・結果表示）
+# streamlit_app.py（Cloud対応版）
 
 import streamlit as st
 import pandas as pd
-from maps_scraper import get_google_maps_data
+from maps_scraper_cloud import get_google_maps_data
 from openpyxl import load_workbook
 import io
 
@@ -21,37 +21,40 @@ if region and industry:
         with st.spinner("Googleマップを検索中..."):
             df = get_google_maps_data(keyword)
 
-        st.success(f"✅ {len(df)} 件の企業情報を取得しました")
-        st.dataframe(df)
+        if df.empty:
+            st.warning("⚠️ 検索結果が見つかりませんでした。")
+        else:
+            st.success(f"✅ {len(df)} 件の企業情報を取得しました")
+            st.dataframe(df)
 
-        # Excelテンプレートへの出力
-        try:
-            template_path = "template.xlsx"
-            wb = load_workbook(template_path)
-            sheet = wb["入力マスター"]
+            # Excelテンプレートへの出力
+            try:
+                template_path = "template.xlsx"
+                wb = load_workbook(template_path)
+                sheet = wb["入力マスター"]
 
-            for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
-                for cell in row[1:]:
-                    cell.value = None
+                for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
+                    for cell in row[1:]:
+                        cell.value = None
 
-            for i, row in df.iterrows():
-                sheet.cell(row=i+2, column=2, value=row["企業名"])
-                sheet.cell(row=i+2, column=3, value=row["業種"])
-                sheet.cell(row=i+2, column=4, value=row["住所"])
-                sheet.cell(row=i+2, column=5, value=row["電話番号"])
+                for i, row in df.iterrows():
+                    sheet.cell(row=i+2, column=2, value=row["企業名"])
+                    sheet.cell(row=i+2, column=3, value=row["業種"])
+                    sheet.cell(row=i+2, column=4, value=row["住所"])
+                    sheet.cell(row=i+2, column=5, value=row["電話番号"])
 
-            output = io.BytesIO()
-            wb.save(output)
-            output.seek(0)
+                output = io.BytesIO()
+                wb.save(output)
+                output.seek(0)
 
-            st.download_button(
-                label="📥 Excelでダウンロード",
-                data=output,
-                file_name=f"{region}_{industry}_企業リスト.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                st.download_button(
+                    label="📥 Excelでダウンロード",
+                    data=output,
+                    file_name=f"{region}_{industry}_企業リスト.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-        except Exception as e:
-            st.error(f"❌ Excel出力中にエラーが発生しました：{e}")
+            except Exception as e:
+                st.error(f"❌ Excel出力中にエラーが発生しました：{e}")
 else:
     st.info("👆 上記の地域・業種を入力してください")
